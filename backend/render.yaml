@@ -1,0 +1,28 @@
+services:
+  # ── Node.js Backend API ──────────────────────────────────────────────────
+  - type: web
+    name: spring-revival-api
+    runtime: node
+    region: singapore   # closest to India
+    plan: free
+    rootDir: .          # relative to repo root (set to backend/ if deploying from monorepo)
+    buildCommand: npm install
+    startCommand: node src/server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: DATABASE_URL
+        sync: false       # set manually in Render dashboard (Supabase connection string)
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: "7d"
+      - key: AI_SERVICE_URL
+        value: https://spring-revival-ai.onrender.com
+      - key: ALLOWED_ORIGINS
+        value: https://spring-revival.vercel.app
+      - key: LOG_LEVEL
+        value: info
