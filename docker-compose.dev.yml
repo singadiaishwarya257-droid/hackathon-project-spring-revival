@@ -1,0 +1,35 @@
+version: '3.9'
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Spring Revival — Development override
+# Usage:  docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# ══════════════════════════════════════════════════════════════════════════════
+
+services:
+  backend:
+    build:
+      target: deps          # skip final stage; use nodemon
+    volumes:
+      - ./backend/src:/app/src   # hot-reload
+    environment:
+      NODE_ENV: development
+    command: ["node_modules/.bin/nodemon", "src/server.js"]
+
+  ai-service:
+    volumes:
+      - ./ai-service:/app   # live code changes
+    command: >
+      uvicorn app.main:app
+      --host 0.0.0.0 --port 8000
+      --reload
+
+  frontend:
+    build:
+      target: builder       # don't build; use Vite dev server
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend/src:/app/src
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+    environment:
+      VITE_API_URL: http://localhost:5000/api

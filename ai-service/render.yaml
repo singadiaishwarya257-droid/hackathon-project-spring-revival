@@ -1,0 +1,14 @@
+services:
+  # ── Python FastAPI AI Service ────────────────────────────────────────────
+  - type: web
+    name: spring-revival-ai
+    runtime: python
+    region: singapore
+    plan: free
+    rootDir: .
+    buildCommand: pip install -r requirements.txt && python -c "from app.services.model_service import ModelService; ModelService.train()"
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
+    healthCheckPath: /health
+    envVars:
+      - key: TRAIN_SECRET
+        generateValue: true

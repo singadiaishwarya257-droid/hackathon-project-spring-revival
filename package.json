@@ -1,0 +1,19 @@
+{
+  "name": "spring-revival-monorepo",
+  "version": "1.0.0",
+  "description": "AI-Based Spring Revival and Recharge Planning — SIH 2026",
+  "private": true,
+  "scripts": {
+    "dev:backend":    "cd backend && npm run dev",
+    "dev:frontend":   "cd frontend && npm run dev",
+    "dev:ai":         "cd ai-service && uvicorn app.main:app --reload --port 8000",
+    "install:all":    "cd backend && npm install && cd ../frontend && npm install",
+    "build:frontend": "cd frontend && npm run build",
+    "docker:up":      "docker compose up --build",
+    "docker:down":    "docker compose down",
+    "docker:dev":     "docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build"
+  },
+  "keywords": ["spring-revival", "sih2026", "tribal", "gis", "ai", "water"],
+  "author": "Team Spring Warriors",
+  "license": "MIT"
+}

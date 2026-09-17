@@ -1,0 +1,114 @@
+version: '3.9'
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Spring Revival — Docker Compose (Full Local Stack)
+# Usage:
+#   1. Copy backend/.env.example → backend/.env  (fill in values)
+#   2. docker compose up --build
+# ══════════════════════════════════════════════════════════════════════════════
+
+services:
+  # ── PostgreSQL + PostGIS ────────────────────────────────────────────────────
+  db:
+    image: postgis/postgis:15-3.4-alpine
+    container_name: spring_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       spring_revival
+      POSTGRES_USER:     postgres
+      POSTGRES_PASSWORD: postgres_dev_password
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./database/seeds/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d spring_revival"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Python AI Service ───────────────────────────────────────────────────────
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: spring_ai
+    restart: unless-stopped
+    environment:
+      TRAIN_SECRET: changeme-train-secret
+    ports:
+      - "8000:8000"
+    volumes:
+      - ai_models:/app/app/models   # persist trained model
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ── Node.js Backend ─────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: spring_backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
+    env_file: ./backend/.env
+    environment:
+      NODE_ENV:       production
+      PORT:           5000
+      DB_HOST:        db
+      DB_PORT:        5432
+      DB_NAME:        spring_revival
+      DB_USER:        postgres
+      DB_PASSWORD:    postgres_dev_password
+      AI_SERVICE_URL: http://ai-service:8000
+      ALLOWED_ORIGINS: http://localhost:3000,http://localhost:5173
+    ports:
+      - "5000:5000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ── React Frontend ──────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: /api
+    container_name: spring_frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "3000:80"
+
+  # ── pgAdmin (optional dev tool) ─────────────────────────────────────────────
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: spring_pgadmin
+    profiles: ["dev"]   # only starts with: docker compose --profile dev up
+    environment:
+      PGADMIN_DEFAULT_EMAIL:    admin@springrevival.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+
+volumes:
+  pg_data:
+  ai_models:
